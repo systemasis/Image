@@ -43,7 +43,9 @@ public class Image2016_ implements PlugInFilter {
 			this.binarisation(ip, 50);
 
 			// Squelletisation
-			int mat[] = {0, 0, 0, 5, 1, 5, 1, 1, 0};
+			int mat[] = {
+					1, 1, 1, 5, 1, 5, 0, 0, 0
+			};
 			this.squelettisation(ip, mat);
 
 			// Composantes Connexes
@@ -85,14 +87,14 @@ public class Image2016_ implements PlugInFilter {
 	private ImagePlus squelettisation(ImageProcessor ip, int[] mat) {
 		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
 		int erosions = 0;
-		
+
 		if(erodable(ip, mat)){
-			while(erodable(ip, mat)){
+			while(erodable(ip, mat) && erosions < 100){
 				img = erosion(ip, mat);
 				erosions++;
 			}
 			try{
-				this.BW.write("nombre d'érosions : "+erosions);
+				this.BW.write("nombre d'érosions : " + erosions);
 				this.BW.newLine();
 			}catch(IOException e){
 				// TODO Auto-generated catch block
@@ -113,12 +115,14 @@ public class Image2016_ implements PlugInFilter {
 
 	public boolean erodable(ImageProcessor ip, int[] mat) {
 		boolean erodable = false;
-		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight(), processedPixels = 0;
+		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight(),
+				processedPixels = 0;
 
 		while(x < width && !erodable){
 			while(y < height && !erodable){
 				// Création de la matrice du pixel sélectionné et ses voisins
-				int[] pixels = {ip.getPixel(x - 1, y - 1), // bottomGauche
+				int[] pixels = {
+						ip.getPixel(x - 1, y - 1), // bottomGauche
 						ip.getPixel(x - 1, y), // middleGauche
 						ip.getPixel(x - 1, y + 1), // topGauche
 						ip.getPixel(x, y - 1), // bottomMiddle
@@ -143,9 +147,9 @@ public class Image2016_ implements PlugInFilter {
 			processedPixels += y;
 			x++;
 		}
-		
+
 		try{
-			this.BW.write("Nombre de pixels vérifiée : "+processedPixels);
+			this.BW.write("Nombre de pixels vérifiés : " + processedPixels);
 			this.BW.newLine();
 		}catch(IOException e){
 			// TODO Auto-generated catch block
@@ -165,15 +169,17 @@ public class Image2016_ implements PlugInFilter {
 	 * @return ImagePlus l'image érodée
 	 */
 	private ImagePlus erosion(ImageProcessor ip, int[] mat) {
-		boolean erodable = true;
+		boolean erodable;
 		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight();
 		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
 		ImageProcessor ip2 = img.getProcessor();
 
-		while(x < width && !erodable){
-			while(y < height && !erodable){
+		while(x < width){
+			while(y < height){
+				erodable = true;
 				// Création de la matrice du pixel sélectionné et ses voisins
-				int[] pixels = {ip.getPixel(x - 1, y - 1), // bottomGauche
+				int[] pixels = {
+						ip.getPixel(x - 1, y - 1), // bottomGauche
 						ip.getPixel(x - 1, y), // middleGauche
 						ip.getPixel(x - 1, y + 1), // topGauche
 						ip.getPixel(x, y - 1), // bottomMiddle
@@ -197,9 +203,9 @@ public class Image2016_ implements PlugInFilter {
 				}
 
 				if(erodable){
-					ip2.putPixel(x, y, 255);
-				}else{
 					ip2.putPixel(x, y, 0);
+				}else{
+					ip2.putPixel(x, y, 255);
 				}
 
 				y++;
@@ -406,7 +412,9 @@ public class Image2016_ implements PlugInFilter {
 					// s'il n'est pas dans les composantes on l'indique comme étant à ajouter, autrement on prend la
 					// clé de sa composante
 					if(!this.isVisited(composantes, x, y)){
-						int[] pixel = {x, y};
+						int[] pixel = {
+								x, y
+						};
 						toAdd.add(pixel);
 					}else{
 						composanteKey = this.getComposanteKey(composantes, x, y);
@@ -451,7 +459,9 @@ public class Image2016_ implements PlugInFilter {
 										this.removeComposanteAndReset(composantes, composanteKey2);
 									}
 								}else{ // Il n'en fait pas parti, donc on le rajoute à la composante en devenir
-									int[] pixel2 = {i, j};
+									int[] pixel2 = {
+											i, j
+									};
 									toAdd.add(pixel2);
 								}
 
