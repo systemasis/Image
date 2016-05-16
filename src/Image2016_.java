@@ -35,23 +35,27 @@ public class Image2016_ implements PlugInFilter {
 			this.filtreMoyennant(ip);
 
 			// Sobel
-			 this.sobel(ip);
-			
-			 this.BW.write("Après Sobel");
-			 this.BW.newLine();
-			
-			 this.binarisation(ip, 50);
-			
-			 // Composantes Connexes
-			 HashMap<Integer, ArrayList<int[]>> composantes = this.getComposantes(ip);
-			
-			 this.BW.write("Nombre de composantes = " + composantes.size());
-			 this.BW.newLine();
-			
-			 this.filterComposantes(composantes);
-			
-			 this.BW.write("Nombre de composantes = " + composantes.size());
-			 this.BW.newLine();
+			this.sobel(ip);
+
+			this.BW.write("Après Sobel");
+			this.BW.newLine();
+
+			this.binarisation(ip, 50);
+
+			// Squelletisation
+			int mat[] = {0, 0, 0, 5, 1, 5, 1, 1, 0};
+			this.squelettisation(ip, mat);
+
+			// Composantes Connexes
+			HashMap<Integer, ArrayList<int[]>> composantes = this.getComposantes(ip);
+
+			this.BW.write("Nombre de composantes = " + composantes.size());
+			this.BW.newLine();
+
+			this.filterComposantes(composantes);
+
+			this.BW.write("Nombre de composantes = " + composantes.size());
+			this.BW.newLine();
 
 			// TODO Ajouter l'étude des composantes connexes
 
@@ -67,6 +71,143 @@ public class Image2016_ implements PlugInFilter {
 
 	public int setup(String args, ImagePlus imp) {
 		return NO_CHANGES + DOES_8G;
+	}
+
+	/**
+	 * Squelettise l'image ip par la matrice mat
+	 * 
+	 * @param ImageProcessor
+	 *            ip
+	 * @param int[]
+	 *            mat
+	 * @return ImagePlus le squelette calculé
+	 */
+	private ImagePlus squelettisation(ImageProcessor ip, int[] mat) {
+		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
+		int erosions = 0;
+		
+		if(erodable(ip, mat)){
+			while(erodable(ip, mat)){
+				img = erosion(ip, mat);
+				erosions++;
+			}
+			try{
+				this.BW.write("nombre d'érosions : "+erosions);
+				this.BW.newLine();
+			}catch(IOException e){
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}else{// Si plus érodable, on créé une nouvelle image pour respecter la signature de la fonction
+			ImageProcessor ip2 = img.getProcessor();
+
+			for(int x = 0; x < ip.getWidth(); x++){
+				for(int y = 0; y < ip.getHeight(); y++){
+					ip2.putPixel(x, y, ip.getPixel(x, y));
+				}
+			}
+		}
+
+		return img;
+	}
+
+	public boolean erodable(ImageProcessor ip, int[] mat) {
+		boolean erodable = false;
+		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight(), processedPixels = 0;
+
+		while(x < width && !erodable){
+			while(y < height && !erodable){
+				// Création de la matrice du pixel sélectionné et ses voisins
+				int[] pixels = {ip.getPixel(x - 1, y - 1), // bottomGauche
+						ip.getPixel(x - 1, y), // middleGauche
+						ip.getPixel(x - 1, y + 1), // topGauche
+						ip.getPixel(x, y - 1), // bottomMiddle
+						ip.getPixel(x, y), // middleMiddle
+						ip.getPixel(x, y + 1), // topMiddle
+						ip.getPixel(x + 1, y - 1), // bottomDroit
+						ip.getPixel(x + 1, y), // middleDroit
+						ip.getPixel(x + 1, y + 1) // topDroit
+				};
+
+				int i = 0;
+
+				while(!erodable && i < 9){
+					if(mat[i] == 1 || mat[i] == 0){
+						if(pixels[i] == mat[i])
+							erodable = true;
+					}
+					i++;
+				}
+				y++;
+			}
+			processedPixels += y;
+			x++;
+		}
+		
+		try{
+			this.BW.write("Nombre de pixels vérifiée : "+processedPixels);
+			this.BW.newLine();
+		}catch(IOException e){
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return erodable;
+	}
+
+	/**
+	 * Érode une image selon la matrice mat
+	 *
+	 * @param ImageProcessor
+	 *            ip
+	 * @param int[]
+	 *            mat
+	 * @return ImagePlus l'image érodée
+	 */
+	private ImagePlus erosion(ImageProcessor ip, int[] mat) {
+		boolean erodable = true;
+		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight();
+		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
+		ImageProcessor ip2 = img.getProcessor();
+
+		while(x < width && !erodable){
+			while(y < height && !erodable){
+				// Création de la matrice du pixel sélectionné et ses voisins
+				int[] pixels = {ip.getPixel(x - 1, y - 1), // bottomGauche
+						ip.getPixel(x - 1, y), // middleGauche
+						ip.getPixel(x - 1, y + 1), // topGauche
+						ip.getPixel(x, y - 1), // bottomMiddle
+						ip.getPixel(x, y), // middleMiddle
+						ip.getPixel(x, y + 1), // topMiddle
+						ip.getPixel(x + 1, y - 1), // bottomDroit
+						ip.getPixel(x + 1, y), // middleDroit
+						ip.getPixel(x + 1, y + 1) // topDroit
+				};
+
+				int i = 0;
+
+				while(erodable && i < 9){
+					if(mat[i] == 1 || mat[i] == 0){
+						if(pixels[i] == mat[i])
+							erodable = true;
+						else
+							erodable = false;
+					}
+					i++;
+				}
+
+				if(erodable){
+					ip2.putPixel(x, y, 255);
+				}else{
+					ip2.putPixel(x, y, 0);
+				}
+
+				y++;
+			}
+			x++;
+		}
+
+		return img;
 	}
 
 	/**
@@ -97,10 +238,11 @@ public class Image2016_ implements PlugInFilter {
 
 				for(int x2 = x - 1; x2 < x + 2; x2++){
 					for(int y2 = y - 1; y2 < y + 2; y2++){
-						if((x2 == x && (y2 == y-1 || y2 == y+1)) || ((x2 == x-1 || x2 == x+1) && y2 == y)) // Au-dessus ou à côté du pixel
-							moyenne += 2*ip.getPixel(x2, y2);
+						// Au-dessus ou à côté du pixel
+						if((x2 == x && (y2 == y - 1 || y2 == y + 1)) || ((x2 == x - 1 || x2 == x + 1) && y2 == y))
+							moyenne += 2 * ip.getPixel(x2, y2);
 						else if(x2 == x && y2 == y) // Le pixel
-							moyenne += 4*ip.getPixel(x2, y2);
+							moyenne += 4 * ip.getPixel(x2, y2);
 						else // Les coins
 							moyenne += ip.getPixel(x2, y2);
 					}
@@ -125,9 +267,9 @@ public class Image2016_ implements PlugInFilter {
 			for(int y = 0; y < height; y++){
 				color = ip.getPixel(x, y);
 				if(color <= seuil)
-					ip.putPixel(x, y, 0);
-				else
 					ip.putPixel(x, y, 255);
+				else
+					ip.putPixel(x, y, 0);
 			}
 		}
 	}
@@ -259,7 +401,7 @@ public class Image2016_ implements PlugInFilter {
 				int composanteKey = -1;
 
 				// Si le pixel est d'une couleur au-dessus du seuil (donc qu'il fait partit du contour)
-				if(ip.getPixel(x, y) == 255){
+				if(ip.getPixel(x, y) == 0){
 
 					// s'il n'est pas dans les composantes on l'indique comme étant à ajouter, autrement on prend la
 					// clé de sa composante
@@ -282,7 +424,7 @@ public class Image2016_ implements PlugInFilter {
 					for(int j = y - 1; j < y + 2; j++){
 						for(int i = x - 1; i < x + 2; i++){
 							// Le pixel voisin est dans les bonnes couleurs
-							if(i != x && j != y && ip.getPixel(i, j) == 255){
+							if(i != x && j != y && ip.getPixel(i, j) == 0){
 
 								// Si le voisin du pixel sélectionné fait parti d'une composante
 								if(this.isVisited(composantes, i, j)){
