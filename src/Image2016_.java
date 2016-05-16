@@ -12,21 +12,25 @@ import ij.process.*;
 
 public class Image2016_ implements PlugInFilter {
 
-	private String FILEPATH = "D:/Shank/Documents/code/Java/ImageJ/plugins/buffer.txt";
+	private String FILEPATH = "D:/Shank/Documents/code/Java/ImageJ/buffer.txt";
 	private BufferedWriter BW;
 	private String TITRE = "Image2016";
+	private boolean TEST = true;
 
 	public void run(ImageProcessor ip) {
 
 		try{
-			this.BW = new BufferedWriter(new FileWriter(new File(this.FILEPATH)));
+			if(this.TEST)
+				this.BW = new BufferedWriter(new FileWriter(new File(this.FILEPATH)));
 
 			// Filtre Gaussien
 			ImagePlus imp = this.gauss(ip);
 			ip = imp.getProcessor();
 
-			this.BW.write("Avant Sobel");
-			this.BW.newLine();
+			if(this.TEST){
+				this.BW.write("Avant Sobel");
+				this.BW.newLine();
+			}
 
 			// Étirement
 			this.etirement(ip);
@@ -37,32 +41,40 @@ public class Image2016_ implements PlugInFilter {
 			// Sobel
 			this.sobel(ip);
 
-			this.BW.write("Après Sobel");
-			this.BW.newLine();
+			if(this.TEST){
+				this.BW.write("Après Sobel");
+				this.BW.newLine();
+			}
 
 			this.binarisation(ip, 50);
 
 			// Squelletisation
 			int mat[] = {
-					1, 1, 1, 5, 1, 5, 0, 0, 0
+					255, 255, 255, 
+					5, 0, 5, 
+					0, 0, 255
 			};
-			this.squelettisation(ip, mat);
+			this.erosion(ip, mat);
 
 			// Composantes Connexes
 			HashMap<Integer, ArrayList<int[]>> composantes = this.getComposantes(ip);
 
-			this.BW.write("Nombre de composantes = " + composantes.size());
-			this.BW.newLine();
+			if(this.TEST){
+				this.BW.write("Nombre de composantes = " + composantes.size());
+				this.BW.newLine();
+			}
 
 			this.filterComposantes(composantes);
 
-			this.BW.write("Nombre de composantes = " + composantes.size());
-			this.BW.newLine();
+			if(this.TEST){
+				this.BW.write("Nombre de composantes = " + composantes.size());
+				this.BW.newLine();
+			}
 
 			// TODO Ajouter l'étude des composantes connexes
-
-			this.BW.close();
-
+			if(this.TEST){
+				this.BW.close();
+			}
 			new ImageWindow(imp);
 
 		}catch(IOException e){
@@ -76,90 +88,6 @@ public class Image2016_ implements PlugInFilter {
 	}
 
 	/**
-	 * Squelettise l'image ip par la matrice mat
-	 * 
-	 * @param ImageProcessor
-	 *            ip
-	 * @param int[]
-	 *            mat
-	 * @return ImagePlus le squelette calculé
-	 */
-	private ImagePlus squelettisation(ImageProcessor ip, int[] mat) {
-		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
-		int erosions = 0;
-
-		if(erodable(ip, mat)){
-			while(erodable(ip, mat) && erosions < 100){
-				img = erosion(ip, mat);
-				erosions++;
-			}
-			try{
-				this.BW.write("nombre d'érosions : " + erosions);
-				this.BW.newLine();
-			}catch(IOException e){
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}else{// Si plus érodable, on créé une nouvelle image pour respecter la signature de la fonction
-			ImageProcessor ip2 = img.getProcessor();
-
-			for(int x = 0; x < ip.getWidth(); x++){
-				for(int y = 0; y < ip.getHeight(); y++){
-					ip2.putPixel(x, y, ip.getPixel(x, y));
-				}
-			}
-		}
-
-		return img;
-	}
-
-	public boolean erodable(ImageProcessor ip, int[] mat) {
-		boolean erodable = false;
-		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight(),
-				processedPixels = 0;
-
-		while(x < width && !erodable){
-			while(y < height && !erodable){
-				// Création de la matrice du pixel sélectionné et ses voisins
-				int[] pixels = {
-						ip.getPixel(x - 1, y - 1), // bottomGauche
-						ip.getPixel(x - 1, y), // middleGauche
-						ip.getPixel(x - 1, y + 1), // topGauche
-						ip.getPixel(x, y - 1), // bottomMiddle
-						ip.getPixel(x, y), // middleMiddle
-						ip.getPixel(x, y + 1), // topMiddle
-						ip.getPixel(x + 1, y - 1), // bottomDroit
-						ip.getPixel(x + 1, y), // middleDroit
-						ip.getPixel(x + 1, y + 1) // topDroit
-				};
-
-				int i = 0;
-
-				while(!erodable && i < 9){
-					if(mat[i] == 1 || mat[i] == 0){
-						if(pixels[i] == mat[i])
-							erodable = true;
-					}
-					i++;
-				}
-				y++;
-			}
-			processedPixels += y;
-			x++;
-		}
-
-		try{
-			this.BW.write("Nombre de pixels vérifiés : " + processedPixels);
-			this.BW.newLine();
-		}catch(IOException e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		return erodable;
-	}
-
-	/**
 	 * Érode une image selon la matrice mat
 	 *
 	 * @param ImageProcessor
@@ -170,48 +98,65 @@ public class Image2016_ implements PlugInFilter {
 	 */
 	private ImagePlus erosion(ImageProcessor ip, int[] mat) {
 		boolean erodable;
-		int y = 0, x = 0, width = ip.getWidth(), height = ip.getHeight();
+		int y, x = 1, width = ip.getWidth(), height = ip.getHeight(),
+				boucles = 0, erode = 0;
 		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
 		ImageProcessor ip2 = img.getProcessor();
 
-		while(x < width){
-			while(y < height){
-				erodable = true;
-				// Création de la matrice du pixel sélectionné et ses voisins
-				int[] pixels = {
-						ip.getPixel(x - 1, y - 1), // bottomGauche
-						ip.getPixel(x - 1, y), // middleGauche
-						ip.getPixel(x - 1, y + 1), // topGauche
-						ip.getPixel(x, y - 1), // bottomMiddle
-						ip.getPixel(x, y), // middleMiddle
-						ip.getPixel(x, y + 1), // topMiddle
-						ip.getPixel(x + 1, y - 1), // bottomDroit
-						ip.getPixel(x + 1, y), // middleDroit
-						ip.getPixel(x + 1, y + 1) // topDroit
-				};
+		do{
+			erode = 0;
+			while(x < width){
+				y = 1;
+				while(y < height){
+					erodable = true;
+					// Création de la matrice du pixel sélectionné et ses voisins
+					int[] pixels = {
+							ip.getPixel(x - 1, y - 1), // bottomGauche
+							ip.getPixel(x - 1, y), // middleGauche
+							ip.getPixel(x - 1, y + 1), // topGauche
+							ip.getPixel(x, y - 1), // bottomMiddle
+							ip.getPixel(x, y), // middleMiddle
+							ip.getPixel(x, y + 1), // topMiddle
+							ip.getPixel(x + 1, y - 1), // bottomDroit
+							ip.getPixel(x + 1, y), // middleDroit
+							ip.getPixel(x + 1, y + 1) // topDroit
+					};
 
-				int i = 0;
+					int i = 0;
 
-				while(erodable && i < 9){
-					if(mat[i] == 1 || mat[i] == 0){
-						if(pixels[i] == mat[i])
-							erodable = true;
-						else
-							erodable = false;
+					while(erodable && i < 9){
+						if(mat[i] == 255 || mat[i] == 0){
+							if(pixels[i] != mat[i])
+								erodable = false;
+						}
+						i++;
 					}
-					i++;
-				}
+					
+					if(erodable){
+						ip2.putPixel(x, y, 0);
+						erode++;
+					}else{ //TODO Ne semble pas fonctionner après la première création
+						ip2.putPixel(x, y, 255);
+					}
 
-				if(erodable){
-					ip2.putPixel(x, y, 0);
-				}else{
-					ip2.putPixel(x, y, 255);
+					y++;
 				}
-
-				y++;
+				x++;
 			}
-			x++;
-		}
+			// On ne travaille plus qu'avec la nouvelle image
+			ip = ip2;
+			boucles++;
+
+			if(this.TEST){
+				try{
+					this.BW.write("Nombre de boucles : " + boucles + "; Nombre d'érosion : " + erode);
+					this.BW.newLine();
+				}catch(IOException e){
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}while(erode > 0 && boucles < 100);
 
 		return img;
 	}
@@ -393,11 +338,6 @@ public class Image2016_ implements PlugInFilter {
 		// Numéro de la composante -> liste des pixels qu'elle inclut
 		HashMap<Integer, ArrayList<int[]>> composantes = new HashMap<Integer, ArrayList<int[]>>();
 		int height = ip.getHeight(), width = ip.getWidth();
-
-		// FileWriter fw = new FileWriter(new File(this.FILEPATH));
-		// BufferedWriter bw = new BufferedWriter(fw);
-		// bw.write("Nbr pixels : " + height * width);
-		// bw.newLine();
 
 		// Parcours des pixels
 		for(int y = 0; y < height; y++){
@@ -618,13 +558,16 @@ public class Image2016_ implements PlugInFilter {
 	 * @param normaliser
 	 */
 	private void appliquerMatrice(ImageProcessor ip, double[][] mat, boolean normaliser) {
-		try{
-			this.BW.write("Avant Normalisation");
-			this.BW.newLine();
-		}catch(IOException e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if(this.TEST){
+			try{
+				this.BW.write("Avant Normalisation");
+				this.BW.newLine();
+			}catch(IOException e){
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
+
 		if(normaliser){
 			double max = mat[0][0];
 			double min = mat[0][0];
