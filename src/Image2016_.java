@@ -50,12 +50,12 @@ public class Image2016_ implements PlugInFilter {
 			this.binarisation(ip, 50);
 
 			// Squelletisation
-			int mat[] = {
-					255, 255, 255,
-					5, 0, 255,
-					0, 0, 5
-			};
-			imp = this.erosion(ip, mat);
+			// int mat[] = {
+			// 255, 255, 255,
+			// 5, 0, 255,
+			// 0, 0, 5
+			// };
+			// imp = this.erosion(ip, mat);
 
 			// Composantes Connexes
 			HashMap<Integer, ArrayList<int[]>> composantes = this.getComposantes(ip);
@@ -95,13 +95,10 @@ public class Image2016_ implements PlugInFilter {
 		return NO_CHANGES + DOES_8G;
 	}
 	
-//	private boolean isSquelettise(int[] pixels){
-//		boolean 
-//	}
-
 	/**
+	 * /!\ Ne fonctionne pas correctement /!\
 	 * Érode une image selon la matrice mat
-	 *
+	 * 
 	 * @param ImageProcessor
 	 *            ip
 	 * @param int[]
