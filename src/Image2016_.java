@@ -51,11 +51,11 @@ public class Image2016_ implements PlugInFilter {
 
 			// Squelletisation
 			int mat[] = {
-					255, 255, 255, 
-					5, 0, 5, 
-					0, 0, 255
+					255, 255, 255,
+					5, 0, 255,
+					0, 0, 5
 			};
-			this.erosion(ip, mat);
+			imp = this.erosion(ip, mat);
 
 			// Composantes Connexes
 			HashMap<Integer, ArrayList<int[]>> composantes = this.getComposantes(ip);
@@ -73,15 +73,15 @@ public class Image2016_ implements PlugInFilter {
 			}
 
 			// TODO Ajouter l'étude des composantes connexes
+			FileSaver fl = new FileSaver(imp);
+			fl.saveAsJpeg("test.jpeg");
+
+			File file = new File("test.jpeg");
+			file.delete();
+
 			if(this.TEST){
 				this.BW.close();
 			}
-			
-			FileSaver fl = new FileSaver(imp);
-			fl.saveAsJpeg("test.jpeg");
-			
-			File file = new File("test.jpeg");
-			file.delete();
 
 			new ImageWindow(imp);
 
@@ -94,6 +94,10 @@ public class Image2016_ implements PlugInFilter {
 	public int setup(String args, ImagePlus imp) {
 		return NO_CHANGES + DOES_8G;
 	}
+	
+//	private boolean isSquelettise(int[] pixels){
+//		boolean 
+//	}
 
 	/**
 	 * Érode une image selon la matrice mat
@@ -103,14 +107,18 @@ public class Image2016_ implements PlugInFilter {
 	 * @param int[]
 	 *            mat
 	 * @return ImagePlus l'image érodée
+	 * @throws IOException
 	 */
-	private ImagePlus erosion(ImageProcessor ip, int[] mat) {
+	private ImagePlus erosion(ImageProcessor ip, int[] mat) throws IOException {
 		boolean erodable;
-		int y, x = 1, width = ip.getWidth(), height = ip.getHeight(),
-				boucles = 0, erode = 0;
+		int y, x = 1, width = ip.getWidth(), height = ip.getHeight();
 		ImagePlus img = NewImage.createByteImage(this.TITRE, ip.getWidth(), ip.getHeight(), 1, NewImage.FILL_BLACK);
 		ImageProcessor ip2 = img.getProcessor();
 
+		/* variables de tests */
+		int boucles = 0, erode = 0, bienerode = 0;
+		boolean aeroder = false;
+		
 		do{
 			erode = 0;
 			while(x < width){
@@ -139,12 +147,22 @@ public class Image2016_ implements PlugInFilter {
 						}
 						i++;
 					}
-					
+
 					if(erodable){
 						ip2.putPixel(x, y, 0);
-						erode++;
-					}else{ //TODO Ne semble pas fonctionner après la première création
+					}else{
+						if(this.TEST && ip.getPixel(x, y) == 0){
+							erode++;
+							aeroder = true;
+						}
+						
 						ip2.putPixel(x, y, 255);
+						
+						if(this.TEST && ip2.getPixel(x, y) == 255 && aeroder){
+							bienerode++;
+						}
+
+						aeroder = false;
 					}
 
 					y++;
@@ -156,13 +174,8 @@ public class Image2016_ implements PlugInFilter {
 			boucles++;
 
 			if(this.TEST){
-				try{
-					this.BW.write("Nombre de boucles : " + boucles + "; Nombre d'érosion : " + erode);
-					this.BW.newLine();
-				}catch(IOException e){
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				this.BW.write("Nombre de boucles : " + boucles + "; Nombre d'érosion : " + erode + "; Bien érodés = " + bienerode);
+				this.BW.newLine();
 			}
 		}while(erode > 0 && boucles < 100);
 
@@ -286,8 +299,9 @@ public class Image2016_ implements PlugInFilter {
 	 * 
 	 * @param ip
 	 * @return
+	 * @throws IOException
 	 */
-	private ImagePlus gauss(ImageProcessor ip) {
+	private ImagePlus gauss(ImageProcessor ip) throws IOException {
 		// rayon: rayon du masque gaussien
 		int rayon = 1;
 
@@ -524,8 +538,9 @@ public class Image2016_ implements PlugInFilter {
 	 * Filtre de Sobel
 	 * 
 	 * @param ip
+	 * @throws IOException
 	 */
-	private void sobel(ImageProcessor ip) {
+	private void sobel(ImageProcessor ip) throws IOException {
 		// mat: la matrice a remplir
 		double[][] mat;
 
@@ -564,16 +579,12 @@ public class Image2016_ implements PlugInFilter {
 	 * @param ip
 	 * @param mat
 	 * @param normaliser
+	 * @throws IOException
 	 */
-	private void appliquerMatrice(ImageProcessor ip, double[][] mat, boolean normaliser) {
+	private void appliquerMatrice(ImageProcessor ip, double[][] mat, boolean normaliser) throws IOException {
 		if(this.TEST){
-			try{
-				this.BW.write("Avant Normalisation");
-				this.BW.newLine();
-			}catch(IOException e){
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			this.BW.write("Avant Normalisation");
+			this.BW.newLine();
 		}
 
 		if(normaliser){
