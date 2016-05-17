@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import ij.*;
 import ij.gui.*;
+import ij.io.FileSaver;
 import ij.plugin.filter.*;
 import ij.process.*;
 
@@ -75,6 +76,13 @@ public class Image2016_ implements PlugInFilter {
 			if(this.TEST){
 				this.BW.close();
 			}
+			
+			FileSaver fl = new FileSaver(imp);
+			fl.saveAsJpeg("test.jpeg");
+			
+			File file = new File("test.jpeg");
+			file.delete();
+
 			new ImageWindow(imp);
 
 		}catch(IOException e){
