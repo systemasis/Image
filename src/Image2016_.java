@@ -746,10 +746,8 @@ public class Image2016_ implements PlugInFilter {
 
 			if(match_method == Imgproc.TM_SQDIFF || match_method == Imgproc.TM_SQDIFF_NORMED){
 				matchLoc = mmr.minLoc;
-
 			}else{
 				matchLoc = mmr.maxLoc;
-
 			}
 
 			return (int) mmr.maxVal;
