@@ -10,7 +10,7 @@ Dans votre espace de travail, entrez les lignes de commandes suivantes :
 ```
 git clone https://github.com/systemasis/image
 cd image/src
-javac -classpath ij.jar Image2016_.java
+javac -cp "../src/*" Image2016_.java
 ```
 
 #Importer
