@@ -681,6 +681,7 @@ public class Image2016_ implements PlugInFilter {
 				}else if(i == 13){
 					tmp = 'R';
 				}
+				sb.append("templates/");
 				sb.append(tmp);
 				sb.append(".jpg");
 				path = sb.toString();
